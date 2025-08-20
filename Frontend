@@ -1,0 +1,94 @@
+import streamlit as st
+import pandas as pd
+from Backend import (
+    read_all_employees,
+    get_unique_departments,
+    get_employee_count,
+    get_total_salary_expense,
+    get_average_salary,
+    get_min_max_salaries
+)
+
+# --- Frontend Layout ---
+st.set_page_config(layout="wide")
+st.title("Human Resources: Employee Directory & Analytics")
+st.markdown("A simple application to view employee data and gain quick insights.")
+
+# --- CURD Principles: READ & Filtering ---
+
+st.header("Employee Directory")
+
+# Sidebar for filters and sorting
+with st.sidebar:
+    st.header("Filters & Sorting")
+    
+    # 1. READ & Filtering: Filter by Department
+    department_list = get_unique_departments()
+    selected_department = st.selectbox(
+        "Filter by Department",
+        department_list
+    )
+    
+    # 2. Sorting: Allow sorting of employees
+    st.subheader("Sorting Options")
+    sort_column = st.selectbox(
+        "Sort employees by",
+        options=["None", "salary", "hire_date"]
+    )
+    sort_order = st.radio(
+        "Sort Order",
+        options=["DESC", "ASC"],
+        index=0 if sort_column else 1 # Default to descending for salary/hire_date
+    )
+
+# Fetch data based on filters and sorting
+if sort_column == "None":
+    employees_data = read_all_employees(department_filter=selected_department)
+else:
+    employees_data = read_all_employees(
+        department_filter=selected_department,
+        sort_by=sort_column,
+        sort_order=sort_order
+    )
+
+# Display the employee data in a dataframe
+if employees_data:
+    df = pd.DataFrame(employees_data, columns=[
+        'Employee ID', 'First Name', 'Last Name', 'Department', 'Hire Date', 'Salary'
+    ])
+    st.dataframe(df, use_container_width=True)
+else:
+    st.info("No employees found with the selected criteria.")
+
+# --- Aggregation & Business Insights ---
+
+st.header("HR Analytics & Business Insights")
+
+# 3. Aggregation: Display key metrics
+col1, col2, col3 = st.columns(3)
+with col1:
+    total_employees = get_employee_count()
+    st.metric(label="Total Employees", value=total_employees)
+
+with col2:
+    total_salary_expense = get_total_salary_expense()
+    st.metric(label="Total Monthly Salary Expense", value=f"${total_salary_expense:,.2f}")
+
+with col3:
+    average_salary = get_average_salary()
+    st.metric(label="Average Salary", value=f"${average_salary:,.2f}")
+
+# 4. Business Insights: MIN and MAX salaries
+min_sal, max_sal = get_min_max_salaries()
+if min_sal is not None and max_sal is not None:
+    st.subheader("Salary Range Insights")
+    st.write(f"**Lowest Salary:** ${min_sal:,.2f}")
+    st.write(f"**Highest Salary:** ${max_sal:,.2f}")
+else:
+    st.warning("Could not fetch salary range insights.")
+
+# How to Run the Application:
+# 1. Save the code above into two files: `backend_fn.py` and `frontend_fn.py` in the same directory.
+# 2. Open a terminal and navigate to the directory where you saved the files.
+# 3. Run the Streamlit application using the command:
+#    `streamlit run frontend_fn.py`
